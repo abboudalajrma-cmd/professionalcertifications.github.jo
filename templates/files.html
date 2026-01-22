@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>إدارة الملفات المرفوعة</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 20px; text-align: right; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: center; }
+        th { background-color: #3498db; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .btn-delete { color: #fff; background-color: #e74c3c; padding: 5px 10px; text-decoration: none; border-radius: 5px; font-size: 14px; }
+        .btn-delete:hover { background-color: #c0392b; }
+        .back-link { display: inline-block; margin-bottom: 20px; text-decoration: none; color: #3498db; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="/" class="back-link">← العودة للرئيسية</a>
+    <h2>قائمة الملفات المفهرسة في النظام</h2>
+    
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <p style="color: green; font-weight: bold;">{{ message }}</p>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <table>
+        <thead>
+            <tr>
+            
+                <th>اسم الملف</th>
+                <th>التحكم</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for file in files %}
+            <tr>
+         
+                <td>{{ file.filename }}</td>
+                <td>
+                    {% if current_user.username == 'admin' %}
+                    <a href="/delete/{{ file.id }}" class="btn-delete" onclick="return confirm('هل أنت متأكد من حذف هذا الملف وجميع بياناته المرتبطة؟')">حذف</a>
+                    {% else %}
+                    <span>للمدير فقط</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="3">لا توجد ملفات مرفوعة حالياً.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+</body>
+</html>

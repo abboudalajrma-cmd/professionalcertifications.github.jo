@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>تسجيل الدخول - نظام الاستعلام عن الشهادات</title>
+    <style>
+        :root { --primary: #1e293b; --accent: #0f172a; --gold: #b48a32; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .login-card { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 20px 25px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; border-top: 6px solid var(--gold); }
+        .logo-img { width: 130px; margin-bottom: 15px; }
+        .header-info h1 { font-size: 1.2rem; color: var(--primary); margin: 5px 0; }
+        .header-info h2 { font-size: 0.95rem; color: #64748b; margin: 3px 0; font-weight: 500; }
+        .system-banner { background: var(--accent); color: white; padding: 12px; border-radius: 8px; margin: 25px 0; font-weight: bold; }
+        input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; text-align: center; }
+        .btn-login { width: 100%; padding: 12px; background: var(--gold); border: none; color: white; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-login:hover { background: #967228; }
+        .msg { color: #dc2626; background: #fee2e2; padding: 8px; border-radius: 6px; margin-bottom: 15px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="الشعار" class="logo-img">
+        <div class="header-info">
+            <h1>وزارة التربية والتعليم</h1>
+            <h2>إدارة الإشراف والتدريب التربوي</h2>
+            <h2>مديرية المتابعة والتقييم وضبط الجودة</h2>
+            <h2>قسم إجازة برامج التنمية المهنية</h2>
+        </div>
+        <div class="system-banner">نظام الاستعلام عن شهادات التنمية المهنية</div>
+        {% with messages = get_flashed_messages() %}{% if messages %}{% for m in messages %}<div class="msg">{{ m }}</div>{% endfor %}{% endif %}{% endwith %}
+        <form method="POST">
+            <input type="text" name="username" placeholder="اسم المستخدم" required>
+            <input type="password" name="password" placeholder="كلمة المرور" required>
+            <button type="submit" class="btn-login">دخول النظام</button>
+        </form>
+    </div>
+</body>
+</html>

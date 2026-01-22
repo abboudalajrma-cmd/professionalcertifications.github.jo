@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام الاستعلام عن شهادات التنمية المهنية</title>
+    <style>
+        :root { 
+            --primary: #1e293b; --accent: #0f172a; --gold: #b48a32; 
+            --success: #166534; --bg: #f8fafc; 
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--primary); margin: 0; padding: 20px; }
+        .container { max-width: 1250px; margin: auto; }
+
+        .official-header { 
+            display: flex; align-items: center; justify-content: space-between; 
+            margin-bottom: 15px; border-bottom: 2px solid var(--gold); padding-bottom: 15px; 
+        }
+        .header-right, .header-left { flex: 1; font-size: 0.95rem; line-height: 1.7; font-weight: bold; }
+        .header-right { text-align: right; }
+        .header-left { text-align: left; }
+        .header-center { flex: 0 0 140px; text-align: center; }
+        .logo-img { width: 110px; height: auto; }
+
+        .system-banner { 
+            text-align: center; background: var(--accent); color: white; 
+            padding: 12px; border-radius: 8px; font-weight: bold; 
+            margin-bottom: 20px; font-size: 1.25rem; border: 1px solid var(--gold);
+        }
+
+        .nav { display: flex; gap: 8px; margin-bottom: 20px; align-items: center; background: white; padding: 10px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .btn { padding: 9px 16px; border-radius: 8px; border: none; cursor: pointer; color: white; text-decoration: none; font-weight: 600; font-size: 0.85rem; transition: 0.3s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-blue { background: #3b82f6; } .btn-gray { background: #64748b; } 
+        .btn-purple { background: #8b5cf6; } .btn-red { background: #ef4444; }
+        .btn-print { background: var(--gold); } .btn-excel { background: var(--success); }
+
+        .user-info { margin-right: auto; font-weight: bold; font-size: 0.9rem; }
+
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e2e8f0; }
+        .search-form { display: flex; gap: 10px; }
+        .input-style { flex-grow: 1; padding: 12px; border: 2px solid #cbd5e1; border-radius: 8px; text-align: center; font-size: 1.05rem; }
+
+        .result-card { border: 1px solid #cbd5e1; margin-bottom: 15px; border-right: 6px solid var(--gold); page-break-inside: avoid; }
+        .card-header { background: #f8fafc; padding: 10px 15px; border-bottom: 1px solid #cbd5e1; display: flex; justify-content: space-between; font-weight: bold; }
+        
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th { background: #f1f5f9; color: var(--accent); padding: 10px; border: 1px solid #cbd5e1; font-size: 0.85rem; }
+        td { padding: 10px; border: 1px solid #cbd5e1; text-align: center; font-size: 0.95rem; }
+        
+        @media print {
+            .no-print, .nav, .btn, .search-form, .card:has(form), .msg-flash { display: none !important; }
+            body { background: white; padding: 0; }
+            .container { max-width: 100%; }
+            .official-header { display: flex !important; }
+            .system-banner { background: #000 !important; -webkit-print-color-adjust: exact; border: 1px solid #000; }
+            .result-card { border: 1px solid #000 !important; box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="official-header">
+            <div class="header-right">
+                وزارة التربية والتعليم<br>
+                إدارة الإشراف والتدريب التربوي<br>
+                مديرية المتابعة والتقييم وضبط الجودة
+            </div>
+            <div class="header-center">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="شعار الوزارة" class="logo-img">
+            </div>
+            <div class="header-left">
+                قسم إجازة برامج التنمية المهنية<br>
+                تاريخ الاستعلام: 20/01/2026<br>
+                مستخرج إلكتروني معتمد
+            </div>
+        </div>
+
+        <div class="system-banner">نظام الاستعلام عن شهادات التنمية المهنية</div>
+
+        <div class="nav no-print">
+            <a href="/" class="btn btn-blue">🏠 الرئيسية</a>
+            {% if current_user.username == 'admin' %}
+                <a href="/files" class="btn btn-gray">📂 الملفات</a>
+                <a href="/users" class="btn btn-purple">👥 المستخدمين</a>
+            {% endif %}
+            <button onclick="window.print()" class="btn btn-print">🖨️ طباعة النتائج</button>
+            <div class="user-info">
+                <span>👤 {{ current_user.username }}</span>
+                <a href="/logout" class="btn btn-red" style="padding: 4px 10px; margin-right: 5px;">خروج</a>
+            </div>
+        </div>
+
+        {% if current_user.username == 'admin' and not is_search %}
+        <div class="card no-print">
+            <h4 style="margin: 0 0 15px 0;">📤 إضافة بيانات جديدة (Excel)</h4>
+            <form method="post" enctype="multipart/form-data" class="search-form">
+                <input type="file" name="file" accept=".xlsx, .xls" class="input-style" style="padding: 7px;" required>
+                <button type="submit" class="btn btn-blue">حفظ البيانات</button>
+            </form>
+        </div>
+        {% endif %}
+
+        <div class="card no-print">
+            <h4 style="margin: 0 0 15px 0;">🔎 استعلام عن موظف:</h4>
+            <form method="post" action="/search_all" class="search-form">
+                <input type="text" name="query" class="input-style" placeholder="أدخل الرقم الوزاري أو الاسم الثلاثي..." value="{{ search_query if search_query }}" required>
+                
+                <select name="sheet_filter" class="input-style" style="flex-grow: 0; width: 220px; cursor: pointer; background: white;">
+                    <option value="">كافة البرامج</option>
+                    {% for sheet in all_sheets %}
+                        <option value="{{ sheet }}" {% if current_sheet == sheet %}selected{% endif %}>{{ sheet }}</option>
+                    {% endfor %}
+                </select>
+
+                <button type="submit" class="btn btn-blue" style="background: var(--accent);">بدء الاستعلام</button>
+            </form>
+        </div>
+
+        {% if is_search and search_data %}
+            <div style="margin-top: 20px;">
+                <h3>نتائج البحث عن: "{{ search_query }}"</h3>
+                {% for row in search_data %}
+                    <div class="result-card">
+                        <div class="card-header">
+                           
+                            <span>البرنامج: {{ row._sheet }}</span>
+                        </div>
+                        <div class="card-body">
+                            <table>
+                                <tbody>
+                                    {% for col, val in row.items() if col not in ['_file', '_sheet'] %}
+                                        {% set clean_val = val|string|trim %}
+                                        {% if clean_val != "" and clean_val|lower != "nan" and clean_val|lower != "none" %}
+                                            <tr>
+                                                <td style="background: #fafafa; font-weight: bold; width: 30%;">{{ col }}</td>
+                                                <td>
+                                                    {% if search_query.lower() in clean_val|lower %}
+                                                        <mark style="background: #fef08a;">{{ val }}</mark>
+                                                    {% else %}
+                                                        {{ val }}
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% elif is_search %}
+            <div style="text-align: center; padding: 40px; color: #94a3b8;">
+                <p>لم يتم العثور على نتائج تطابق بحثك.</p>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
