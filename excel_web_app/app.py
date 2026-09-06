@@ -3,7 +3,7 @@ import json
 import sqlite3
 from io import BytesIO
 import pandas as pd
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file, send_from_directory
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -11,9 +11,14 @@ app = Flask(__name__)
 # مفتاح سري ثابت لضمان استقرار الجلسات والتنبيهات
 app.secret_key = os.environ.get('SECRET_KEY', 'dev_secret_key_12345')
 
-# --- إعدادات المسارات وقاعدة البيانات ---
+# --- إعدادات المسارات والمجلدات وقاعدة البيانات ---
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DB_PATH = os.path.join(BASE_DIR, 'archive_v3.db')
+
+# مجلد حفظ الملفات المرفوعة
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 ALLOWED_EXTENSIONS = {'xlsx', 'xls'}
 
@@ -84,9 +89,12 @@ def index():
                 return redirect(url_for('index'))
                 
             try:
-                file_bytes = file.read()
-                with BytesIO(file_bytes) as data_stream:
-                    excel_dict = pd.read_excel(data_stream, sheet_name=None, engine='openpyxl')
+                # 1. حفظ الملف محلياً في مجلد uploads لتوفيره للتنزيل المباشر
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+                file.save(file_path)
+
+                # 2. قراءة البيانات من الملف المحفوظ للفهرسة
+                excel_dict = pd.read_excel(file_path, sheet_name=None, engine='openpyxl')
                 
                 with get_db_connection() as conn:
                     cursor = conn.cursor()
@@ -113,7 +121,7 @@ def index():
                         
                         for _, row in df.iterrows():
                             row_dict = row.to_dict()
-                            search_vector = " ".join([v.strip() for v in row_dict.values() if v.strip()]).lower()
+                            search_vector = " ".join([str(v).strip() for v in row_dict.values() if str(v).strip()]).lower()
                             
                             rows_to_insert.append((
                                 file_id, 
@@ -127,7 +135,7 @@ def index():
                                             VALUES (?, ?, ?, ?)''', rows_to_insert)
                     conn.commit()
                     
-                flash("تم رفع الملف وتحديث البيانات بنجاح المجلد!", "success")
+                flash("تم رفع الملف وحفظه بنجاح!", "success")
                 return redirect(url_for('index'))
             except Exception as e:
                 flash("خطأ أثناء معالجة وقراءة ملف الإكسل: " + str(e), "error")
@@ -198,11 +206,69 @@ def list_files():
         files = conn.execute('SELECT id, filename FROM files').fetchall()
     return render_template("files.html", files=files)
 
+# --- مسار تنزيل الملف المرفوع الأصلي ---
+@app.route("/download_file/<int:file_id>")
+@login_required
+def download_file(file_id):
+    with get_db_connection() as conn:
+        file_row = conn.execute('SELECT filename FROM files WHERE id = ?', (file_id,)).fetchone()
+        
+    if not file_row:
+        flash("الملف غير موجود في قاعدة البيانات!", "error")
+        return redirect(url_for('list_files'))
+        
+    filename = file_row['filename']
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    
+    # 1. إذا كان الملف موجوداً في المجلد يتم تنزيله مباشرة
+    if os.path.exists(file_path):
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
+    
+    # 2. إذا لم يكن الملف موجوداً في المجلد (ملف قديم)، يتم إعادة بنائه من البيانات المفهرسة في قاعدة البيانات
+    try:
+        with get_db_connection() as conn:
+            rows = conn.execute('SELECT sheet_name, content_json FROM indexed_data WHERE file_id = ?', (file_id,)).fetchall()
+            
+            if not rows:
+                flash("لا توجد بيانات لهذه الملف لتنزيله", "error")
+                return redirect(url_for('list_files'))
+            
+            sheets_data = {}
+            for row in rows:
+                sheet_name = row['sheet_name'] or 'Sheet1'
+                data_dict = json.loads(row['content_json'])
+                if sheet_name not in sheets_data:
+                    sheets_data[sheet_name] = []
+                sheets_data[sheet_name].append(data_dict)
+            
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                for sheet_name, data_list in sheets_data.items():
+                    df = pd.DataFrame(data_list)
+                    df.to_excel(writer, index=False, sheet_name=sheet_name[:31])
+            
+            output.seek(0)
+            
+            return send_file(
+                output,
+                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                as_attachment=True,
+                download_name=filename
+            )
+    except Exception as e:
+        flash("حدث خطأ أثناء تنزيل/تصدير الملف: " + str(e), "error")
+        return redirect(url_for('list_files'))
 @app.route("/delete/<int:file_id>")
 @login_required
 def delete_file(file_id):
     if current_user.username == 'admin':
         with get_db_connection() as conn:
+            file_row = conn.execute('SELECT filename FROM files WHERE id = ?', (file_id,)).fetchone()
+            if file_row:
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], file_row['filename'])
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+            
             conn.execute('DELETE FROM indexed_data WHERE file_id = ?', (file_id,))
             conn.execute('DELETE FROM files WHERE id = ?', (file_id,))
             conn.commit()
@@ -254,18 +320,15 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-# --- مسار قائمة الامتحانات والإحصاء الذكي بدون تكرار وبدون مسافات عشوائية ---
 @app.route("/exams_list")
 @login_required
 def exams_list():
-    exams_count = {}  # قاموس لتخزين اسم الامتحان وعدد السجلات
+    exams_count = {}
     try:
         with get_db_connection() as conn:
             rows = conn.execute('SELECT content_json FROM indexed_data').fetchall()
             for row in rows:
                 data = json.loads(row['content_json'])
-                
-                # فحص شامل وذكي لمفاتيح الأعمدة للوصول لاسم الامتحان أو البرنامج
                 for key, value in data.items():
                     if any(word in key for word in ['اسم الامتحان']):
                         val_str = str(value).strip()
@@ -277,9 +340,9 @@ def exams_list():
     except Exception:
         pass
     
-    # ترتيب مخرجات الامتحانات أبجدياً بشكل منسق
     sorted_exams = sorted(exams_count.items(), key=lambda x: x[0])
     return render_template("exams.html", exams=sorted_exams)
+
 @app.route("/export_exams_excel")
 @login_required
 def export_exams_excel():
@@ -290,7 +353,7 @@ def export_exams_excel():
             for row in rows:
                 data = json.loads(row['content_json'])
                 for key, value in data.items():
-                    if any(word in key for word in [ 'اسم الامتحان']):
+                    if any(word in key for word in ['اسم الامتحان']):
                         val_str = str(value).strip()
                         if val_str and val_str.lower() not in ['nan', 'none', '']:
                             if val_str in exams_count:
@@ -298,17 +361,14 @@ def export_exams_excel():
                             else:
                                 exams_count[val_str] = 1
                                 
-        # تحويل البيانات إلى DataFrame لتصديرها
         sorted_exams = sorted(exams_count.items(), key=lambda x: x[0])
         df = pd.DataFrame(sorted_exams, columns=['اسم الامتحان / البرنامج', 'عدد الممتحنين'])
         
-        # تحويل ملف الإكسل إلى بايتس لإرساله للمتصفح مباشرة دون حفظه على السيرفر
         output = BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             df.to_excel(writer, index=False, sheet_name='إحصائيات الامتحانات')
         output.seek(0)
         
-        from flask import send_file
         return send_file(
             output,
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -318,10 +378,10 @@ def export_exams_excel():
     except Exception as e:
         flash("حدث خطأ أثناء تصدير ملف الإكسل: " + str(e), "error")
         return redirect(url_for('exams_list'))
+
 @app.route("/update_exam_name", methods=["POST"])
 @login_required
 def update_exam_name():
-    # السماح فقط للمشرف (admin) بالتعديل
     if current_user.username != 'admin':
         flash("عذراً، لا تمتلك صلاحية تعديل البيانات", "error")
         return redirect(url_for('exams_list'))
@@ -336,25 +396,21 @@ def update_exam_name():
     updated_count = 0
     try:
         with get_db_connection() as conn:
-            # جلب كل السجلات لتحديث الاسم داخل الـ JSON وفي متجه البحث
             rows = conn.execute('SELECT id, content_json, search_vector FROM indexed_data').fetchall()
             
             for row in rows:
                 data = json.loads(row['content_json'])
                 modified = False
                 
-                # البحث عن الاسم القديم وتحديثه
                 for key, value in data.items():
                     if any(word in key for word in ['برنامج', 'امتحان', 'دورة', 'البرنامج', 'الامتحان', 'اسم الامتحان']):
                         if str(value).strip() == old_name:
                             data[key] = new_name
                             modified = True
                 
-                # إذا وجدنا الاسم وتعدل، نحفظ السجل في قاعدة البيانات
                 if modified:
                     new_json = json.dumps(data, ensure_ascii=False)
-                    # تحديث متجه البحث أيضاً ليعكس الاسم الجديد
-                    new_vector = " ".join([v.strip() for v in data.values() if v.strip()]).lower()
+                    new_vector = " ".join([str(v).strip() for v in data.values() if str(v).strip()]).lower()
                     
                     conn.execute('UPDATE indexed_data SET content_json = ?, search_vector = ? WHERE id = ?', 
                                  (new_json, new_vector, row['id']))
@@ -366,5 +422,6 @@ def update_exam_name():
         flash("حدث خطأ أثناء التحديث: " + str(e), "error")
         
     return redirect(url_for('exams_list'))
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)

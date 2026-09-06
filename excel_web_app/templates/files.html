@@ -11,8 +11,13 @@
         th, td { padding: 12px; border: 1px solid #ddd; text-align: center; }
         th { background-color: #3498db; color: white; }
         tr:nth-child(even) { background-color: #f9f9f9; }
-        .btn-delete { color: #fff; background-color: #e74c3c; padding: 5px 10px; text-decoration: none; border-radius: 5px; font-size: 14px; transition: background 0.2s; }
+        
+        .btn-download { color: #fff; background-color: #2ecc71; padding: 6px 12px; text-decoration: none; border-radius: 5px; font-size: 14px; transition: background 0.2s; margin-left: 5px; display: inline-block; }
+        .btn-download:hover { background-color: #27ae60; }
+        
+        .btn-delete { color: #fff; background-color: #e74c3c; padding: 6px 12px; text-decoration: none; border-radius: 5px; font-size: 14px; transition: background 0.2s; display: inline-block; }
         .btn-delete:hover { background-color: #c0392b; }
+        
         .back-link { display: inline-block; margin-bottom: 20px; text-decoration: none; color: #3498db; font-weight: bold; }
         .back-link:hover { text-decoration: underline; }
         .alert-success { background-color: #d4edda; color: #155724; padding: 12px; border-radius: 5px; border: 1px solid #c3e6cb; margin-bottom: 20px; font-weight: bold; }
@@ -45,8 +50,12 @@
             <tr>
                 <td>{{ file.filename }}</td>
                 <td>
+                    <!-- زر تنزيل الملف الأصلي -->
+                    <a href="{{ url_for('download_file', file_id=file.id) }}" class="btn-download">تنزيل</a>
+
+                    <!-- زر الحذف (للمدير فقط) -->
                     {% if current_user.username == 'admin' %}
-                    <a href="/delete/{{ file.id }}" class="btn-delete" onclick="return confirm('هل أنت متأكد من حذف هذا الملف وجميع بياناته المرتبطة؟')">حذف</a>
+                    <a href="{{ url_for('delete_file', file_id=file.id) }}" class="btn-delete" onclick="return confirm('هل أنت متأكد من حذف هذا الملف وجميع بياناته المرتبطة؟')">حذف</a>
                     {% else %}
                     <span class="badge-admin">للمدير فقط</span>
                     {% endif %}
