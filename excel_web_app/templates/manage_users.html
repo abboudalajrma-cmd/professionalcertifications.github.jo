@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>إدارة المستخدمين</title>
+    <style>
+        :root { --primary: #1e293b; --accent: #3b82f6; --danger: #ef4444; --bg: #f1f5f9; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 30px; }
+        .container { max-width: 800px; margin: auto; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .input-group { display: flex; gap: 10px; margin-top: 15px; }
+        input { padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; flex-grow: 1; }
+        .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; color: white; font-weight: bold; text-decoration: none; }
+        .btn-add { background: var(--accent); } .btn-del { background: var(--danger); font-size: 0.8em; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border: 1px solid #e2e8f0; text-align: center; }
+        th { background: #f8fafc; color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" style="text-decoration: none; color: var(--accent);">← العودة</a>
+        <div class="card">
+            <h2>👥 مستخدم جديد</h2>
+            <form method="POST" action="/add_user" class="input-group">
+                <input type="text" name="username" placeholder="الاسم" required>
+                <input type="password" name="password" placeholder="كلمة المرور" required>
+                <button type="submit" class="btn btn-add">إضافة</button>
+            </form>
+        </div>
+        <div class="card">
+            <table>
+                <thead><tr><th>#</th><th>المستخدم</th><th>الإجراء</th></tr></thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ u.username }}</td>
+                        <td>{% if u.username != 'admin' %}<a href="/delete_user/{{ u.id }}" class="btn btn-del">حذف</a>{% else %}-{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام الاستعلام عن شهادات التنمية المهنية</title>
+    <style>
+        :root { 
+            --primary: #1e293b; 
+            --accent: #0f172a; 
+            --gold: #b48a32; 
+            --gold-hover: #967128;
+            --success: #166534; 
+            --bg: #f8fafc; 
+            --border: #cbd5e1;
+            --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--primary); margin: 0; padding: 20px; line-height: 1.5; }
+        .container { max-width: 1250px; margin: auto; }
+
+        /* ترويسة الصفحة الرسمية */
+        .official-header { 
+            display: flex; align-items: center; justify-content: space-between; 
+            margin-bottom: 20px; border-bottom: 2px solid var(--gold); padding-bottom: 15px; 
+        }
+        .header-right, .header-left { flex: 1; font-size: 0.95rem; line-height: 1.8; font-weight: bold; }
+        .header-right { text-align: right; }
+        .header-left { text-align: left; }
+        .header-center { flex: 0 0 140px; text-align: center; }
+        .logo-img { width: 110px; height: auto; }
+
+        .system-banner { 
+            text-align: center; background: var(--accent); color: white; 
+            padding: 14px; border-radius: 8px; font-weight: bold; 
+            margin-bottom: 20px; font-size: 1.35rem; border: 1px solid var(--gold);
+            box-shadow: var(--card-shadow);
+        }
+
+        /* شريط التنقل */
+        .nav { display: flex; gap: 10px; margin-bottom: 25px; align-items: center; background: white; padding: 12px; border-radius: 10px; box-shadow: var(--card-shadow); flex-wrap: wrap; }
+        .btn { padding: 10px 18px; border-radius: 8px; border: none; cursor: pointer; color: white; text-decoration: none; font-weight: 600; font-size: 0.9rem; transition: all 0.2s ease-in-out; display: inline-flex; align-items: center; gap: 6px; }
+        .btn:hover { transform: translateY(-1px); filter: brightness(90%); }
+        .btn-blue { background: #2563eb; } 
+        .btn-gray { background: #475569; } 
+        .btn-purple { background: #7c3aed; } 
+        .btn-red { background: #dc2626; }
+        .btn-print { background: var(--gold); } 
+        .btn-print:hover { background: var(--gold-hover); }
+
+        .user-info { margin-right: auto; font-weight: bold; font-size: 0.95rem; display: flex; align-items: center; gap: 10px; }
+
+        /* الصناديق الكرتونية */
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: var(--card-shadow); margin-bottom: 25px; border: 1px solid #e2e8f0; }
+        
+        /* تصميم صندوق ونموذج البحث */
+        .search-form { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .input-style { flex: 2 1 350px; padding: 12px; border: 2px solid var(--border); border-radius: 8px; text-align: center; font-size: 1.05rem; outline: none; transition: all 0.2s; background-color: #fff; }
+        .input-style:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+        
+        .form-select { flex: 1 1 250px; padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; background-color: white; color: var(--primary); outline: none; cursor: pointer; transition: all 0.2s; text-align: center; }
+        .form-select:focus { border-color: #2563eb; }
+
+        .search-options-container { width: 100%; display: flex; gap: 25px; margin-top: 10px; padding-right: 5px; font-size: 0.95rem; font-weight: 600; color: #475569; }
+        .radio-label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+        .radio-input { cursor: pointer; width: 18px; height: 18px; }
+
+        /* صناديق نظام التنبيهات الوميضية (Flash) */
+        .flash-messages { margin-bottom: 20px; }
+        .alert { padding: 12px 20px; border-radius: 8px; font-weight: bold; margin-bottom: 10px; font-size: 0.95rem; display: flex; align-items: center; }
+        .alert-success { background-color: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+        .alert-error { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+        /* بطاقات عرض النتائج وجداولها */
+        .result-card { border: 1px solid var(--border); margin-bottom: 20px; border-right: 6px solid var(--gold); page-break-inside: avoid; background: white; border-radius: 6px; overflow: hidden; box-shadow: var(--card-shadow); }
+        .card-header { background: #f8fafc; padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; font-weight: bold; color: var(--accent); font-size: 0.95rem; }
+        
+        .table-container { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; background: white; min-width: 500px; }
+        td { padding: 12px 20px; border: 1px solid var(--border); text-align: center; font-size: 1rem; transition: background 0.15s; }
+        tr:hover td { background-color: #f8fafc; }
+        
+        @media print {
+            .no-print, .nav, .btn, .search-form, .card:has(form), .flash-messages { display: none !important; }
+            body { background: white; padding: 0; }
+            .container { max-width: 100%; }
+            .official-header { display: flex !important; }
+            .system-banner { background: #000 !important; -webkit-print-color-adjust: exact; border: 1px solid #000; color: white !important; }
+            .result-card { border: 1px solid #000 !important; box-shadow: none; border-right: 6px solid #000 !important; }
+            td { border: 1px solid #000 !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="official-header">
+            <div class="header-right">
+                وزارة التربية والتعليم<br>
+                إدارة الإشراف والتدريب التربوي<br>
+                مديرية المتابعة والتقييم وضبط الجودة<br>
+            </div>
+            <div class="header-center">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="شعار الوزارة" class="logo-img">
+            </div>
+            <div class="header-left">
+                 قسم إجازة برامج التنمية المهنية<br>
+                 تاريخ الاستعلام: <span id="current-date"></span><br>
+            </div>
+        </div>
+
+        <div class="system-banner">نظام الاستعلام عن شهادات التنمية المهنية</div>
+
+        <div class="nav no-print">
+            <a href="/" class="btn btn-blue">🏠 الرئيسية</a><a href="/exams_list" class="btn btn-blue">📋 عرض الامتحانات</a>
+            {% if current_user.username == 'admin' %}
+                <a href="/files" class="btn btn-gray">📂 الملفات</a>
+                <a href="/users" class="btn btn-purple">👥 المستخدمين</a>
+            {% endif %}
+            <button onclick="window.print()" class="btn btn-print">🖨️ طباعة النتائج</button>
+            <div class="user-info">
+                <span>👤 مرحباً: {{ current_user.username }}</span>
+                <a href="/logout" class="btn btn-red" style="padding: 5px 12px; margin-right: 5px;">خروج</a>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-messages no-print">
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category if category != 'message' else 'success' }}">
+                 {{ message }}
+              </div>
+            {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        {% if current_user.username == 'admin' and not is_search %}
+        <div class="card no-print">
+            <h4 style="margin: 0 0 15px 0; color: var(--accent); font-size: 1.1rem;">📤 إضافة بيانات جديدة (Excel)</h4>
+            <form method="post" enctype="multipart/form-data" class="search-form">
+                <input type="file" name="file" accept=".xlsx, .xls" class="input-style" style="padding: 7px;" required>
+                <button type="submit" class="btn btn-blue">حفظ البيانات</button>
+            </form>
+        </div>
+        {% endif %}
+
+        <div class="card no-print">
+            <h4 style="margin: 0 0 15px 0; color: var(--accent); font-size: 1.1rem;">🔎 استعلام وبحث مخصص:</h4>
+            <form method="post" action="/search_all" class="search-form">
+                
+                <input type="text" name="query" class="input-style" placeholder="أدخل الرقم الوزاري أو الاسم الثلاثي لبدء البحث..." value="{{ search_query if search_query }}">
+                
+                <select name="sheet_filter" class="form-select">
+                    <option value="">-- كافة البرامج المرفوعة --</option>
+                    {% for name in all_sheets %}
+                        <option value="{{ name }}" {% if current_sheet == name %}selected{% endif %}>
+                            {{ name }}
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <button type="submit" class="btn" style="background: var(--accent); padding: 12px 24px;">بدء الاستعلام</button>
+
+                <div class="search-options-container">
+                    <span>طريقة مطابقة البحث:</span>
+                    <label class="radio-label">
+                        <input type="radio" name="search_type" value="contains" class="radio-input" {% if search_type != 'exact' %}checked{% endif %}>
+                        البحث الذكي الجزئي (يحتوي على)
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="search_type" value="exact" class="radio-input" {% if search_type == 'exact' %}checked{% endif %}>
+                        مطابقة تامة وكاملة (للأرقام الوزارية والمعرفات)
+                    </label>
+                </div>
+            </form>
+        </div>
+
+        {% if is_search and search_data %}
+            <div style="margin-top: 20px;">
+                <h3 class="no-print" style="color: var(--accent); font-size: 1.2rem; margin-bottom: 15px;">نتائج الاستعلام الحالية:</h3>
+                {% for row in search_data %}
+                    <div class="result-card">
+                        <div class="card-header">
+                            <span>البرنامج الحالي: {{ row._sheet }}</span>
+                            <span>مصدر ملف الاستيراد: {{ row._file }}</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-container">
+                                <table>
+                                    <tbody>
+                                        {% for col, val in row.items() if col not in ['_file', '_sheet'] %}
+                                            {% set clean_val = val|string|trim %}
+                                            {% if clean_val != "" and clean_val|lower != "nan" and clean_val|lower != "none" %}
+                                                <tr>
+                                                    <td style="background: #f8fafc; font-weight: bold; width: 30%; text-align: right; padding-right: 20px; color: var(--accent);">{{ col }}</td>
+                                                    <td style="text-align: right; padding-right: 20px;">
+                                                        {% if search_type != 'exact' and search_query and search_query.lower() in clean_val|lower %}
+                                                            <mark style="background: #fef08a; padding: 2px 6px; border-radius: 4px; font-weight: 600;">{{ val }}</mark>
+                                                        {% else %}
+                                                            {{ val }}
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% elif is_search %}
+            <div class="card" style="text-align: center; padding: 50px; color: #64748b;">
+                <p style="font-size: 1.15rem; font-weight: bold; margin: 0;">عذراً، لم يتم العثور على أي سجلات تطابق خيارات الاستعلام الحالية في النظام.</p>
+            </div>
+        {% endif %}
+    </div>
+    <script>
+    // جلب تاريخ اليوم تلقائياً بصيغة يوم/شهر/سنة
+    const today = new Date();
+    const formattedDate = today.toLocaleDateString('en-GB'); // يخرج التاريخ بشكل 06/09/2026
+    document.getElementById("current-date").textContent = formattedDate;
+</script>
+</body>
+</html>

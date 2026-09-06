@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>إحصائيات وتعديل الامتحانات</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f8fafc; color: #1e293b; padding: 30px; margin: 0; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        h2 { color: #0f172a; border-bottom: 2px solid #b48a32; padding-bottom: 12px; margin-top: 0; }
+        .buttons-container { display: flex; gap: 10px; margin-bottom: 25px; }
+        .btn { display: inline-block; padding: 10px 20px; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; transition: 0.2s; border: none; cursor: pointer; font-size: 0.95rem; }
+        .back-btn { background: #2563eb; }
+        .back-btn:hover { background: #1d4ed8; }
+        .excel-btn { background: #166534; }
+        .excel-btn:hover { background: #14532d; }
+        
+        /* التنبيهات */
+        .flash-messages { margin-bottom: 20px; }
+        .alert { padding: 12px; border-radius: 6px; font-weight: bold; margin-bottom: 10px; }
+        .alert-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+        .alert-error { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+
+        .exam-card { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 16px 20px; 
+            background: #f1f5f9; 
+            margin-bottom: 12px; 
+            border-radius: 8px; 
+            border-right: 5px solid #b48a32; 
+            font-size: 1.1rem;
+        }
+        .exam-info { display: flex; flex-direction: column; gap: 5px; }
+        .exam-name { font-weight: 600; color: #1e293b; }
+        .edit-link { color: #2563eb; font-size: 0.85rem; cursor: pointer; text-decoration: underline; width: fit-content; }
+        
+        .counter-badge { 
+            background: #0f172a; 
+            color: #ffffff; 
+            padding: 6px 14px; 
+            border-radius: 20px; 
+            font-weight: bold; 
+            font-size: 0.95rem; 
+            border: 1px solid #b48a32;
+        }
+        .no-data { text-align: center; color: #64748b; font-style: italic; padding: 40px 0; }
+
+        /* نافذة التعديل المنبثقة */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 10px; max-width: 500px; width: 90%; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .modal-title { margin-top: 0; color: #0f172a; border-bottom: 2px solid #b48a32; padding-bottom: 8px; }
+        .form-group { margin: 15px 0; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+        .modal-buttons { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+        .btn-close { background: #64748b; }
+        .btn-save { background: #16a34a; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- عرض التنبيهات -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="buttons-container">
+            <a href="/" class="btn back-btn">🏠 العودة للرئيسية</a>
+            {% if exams %}
+                <a href="/export_exams_excel" class="btn excel-btn">📊 تصدير القائمة إلى Excel</a>
+            {% endif %}
+        </div>
+        
+        <h2>📋 قائمة الامتحانات وإمكانية تعديل المسميات:</h2>
+        
+        {% if exams %}
+            {% for exam_name, count in exams %}
+                <div class="exam-card">
+                    <div class="exam-info">
+                        <span class="exam-name">{{ exam_name }}</span>
+                        <!-- يظهر زر التعديل فقط لحساب الـ admin -->
+                        {% if current_user.username == 'admin' %}
+                            <span class="edit-link" onclick="openEditModal('{{ exam_name }}')">✏️ تعديل هذا الاسم</span>
+                        {% endif %}
+                    </div>
+                    <span class="counter-badge">عدد الممتحنين: {{ count }}</span>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="no-data">لم يتم العثور على أي امتحانات حالياً.</p>
+        {% endif %}
+    </div>
+
+    <!-- نافذة التعديل (Modal) -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h3 class="modal-title">✏️ تعديل اسم البرنامج / الامتحان</h3>
+            <form action="/update_exam_name" method="POST">
+                <input type="hidden" id="old_name" name="old_name">
+                
+                <div class="form-group">
+                    <label>الاسم الحالي:</label>
+                    <input type="text" id="display_old_name" disabled style="background: #f1f5f9; color: #64748b;">
+                </div>
+                
+                <div class="form-group">
+                    <label>الاسم الجديد المعوّض:</label>
+                    <input type="text" id="new_name" name="new_name" required placeholder="اكتب الاسم الجديد هنا..." autocomplete="off">
+                </div>
+                
+                <div class="modal-buttons">
+                    <button type="button" class="btn btn-close" onclick="closeEditModal()">إلغاء</button>
+                    <button type="submit" class="btn btn-save">حفظ التعديل  💾</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openEditModal(examName) {
+            document.getElementById('old_name').value = examName;
+            document.getElementById('display_old_name').value = examName;
+            document.getElementById('new_name').value = examName; // وضع الاسم الحالي تسهيلاً للتعديل
+            document.getElementById('editModal').style.display = 'flex';
+        }
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+        // إغلاق النافذة عند الضغط خارجها
+        window.onclick = function(event) {
+            let modal = document.getElementById('editModal');
+            if (event.target == modal) { closeEditModal(); }
+        }
+    </script>
+</body>
+</html>
